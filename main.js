@@ -3,70 +3,92 @@ const path = require("path");
 
 const base = "./START";
 
-const moveFoldersUp = (base) => {
-  const folders = fs.readdirSync(base);
-  folders.forEach((item) => {
-    const localBase = path.join(base, item);
-    const state = fs.statSync(localBase);
-    if (state.isDirectory()) {
-      const basename = path.basename(localBase);
-      moveFoldersUp(localBase);
-      fs.renameSync(localBase, "./RESULT/" + basename, (err) => {
+const createFolder = (base) => {
+  fs.exists("./RESULT", (err, isExist) => {
+    if (err) {
+      console.log(err);
+      return;
+    }
+    if (!isExist) {
+      fs.mkdir("./RESULT", (err) => {
         if (err) {
           console.log(err);
         }
       });
     }
   });
-  //   fs.rmdirSync(base);
 };
 
 const moveFilesUp = (base) => {
-  if (!fs.existsSync("./RESULT")) {
-    fs.mkdirSync("./RESULT");
-  }
-  const folders = fs.readdirSync(base);
-  folders.forEach((item) => {
-    const localBase = path.join(base, item);
-    const state = fs.statSync(localBase);
-    if (state.isFile()) {
-      const basename = path.basename(localBase);
-      fs.linkSync(localBase, "./RESULT/" + basename, (err) => {
+  fs.readdir(base, (err, folders) => {
+    if (err) {
+      console.log(err);
+      return;
+    }
+    folders.forEach((item) => {
+      const localBase = path.join(base, item);
+      fs.stat(localBase, (err, state) => {
         if (err) {
           console.log(err);
+          return;
         }
+        if (state.isFile()) {
+          const basename = path.basename(localBase);
+          const firstSymb = basename[0].toUpperCase();
+          fs.exists(path.join("./RESULT/", firstSymb), (err, isExist) => {
+            if (err) {
+              console.log(err);
+              return;
+            }
+            if (!isExist) {
+              fs.mkdir(path.join("./RESULT/", firstSymb), (err) => {
+                if (err) {
+                  console.log(err);
+                }
+                fs.link(
+                  localBase,
+                  path.join("./RESULT/", firstSymb, basename),
+                  (err) => {
+                    if (err) {
+                      console.log(err);
+                    }
+                    fs.unlink(localBase, (err) => {
+                      if (err) {
+                        console.log(err);
+                      }
+                    });
+                  }
+                );
+              });
+            } else {
+              fs.link(
+                localBase,
+                path.join("./RESULT/", firstSymb, basename),
+                (err) => {
+                  if (err) {
+                    console.log(err);
+                  }
+                  fs.unlink(localBase, (err) => {
+                    if (err) {
+                      console.log(err);
+                    }
+                  });
+                }
+              );
+            }
+          });
+        } else {
+          moveFilesUp(localBase);
+        }
+        // fs.rmdir(base, (err) => {
+        //   if (err) {
+        //     console.log(err);
+        //   }
+        // });
       });
-      fs.unlinkSync(localBase);
-    } else {
-      moveFilesUp(localBase);
-    }
+    });
   });
 };
 
-const sort = (base) => {
-  const files = fs.readdirSync(base);
-  files.forEach((item) => {
-    const localBase = path.join(base, item);
-    const state = fs.statSync(localBase);
-    if (state.isFile()) {
-      const basename = path.basename(localBase);
-      const firstSymb = basename[0].toUpperCase();
-      fs.linkSync(
-        localBase,
-        "./RESULT/" + firstSymb + "/" + basename,
-        (err) => {
-          if (err) {
-            console.log(err);
-          }
-        }
-      );
-      fs.unlinkSync(localBase);
-    } else {
-      moveFilesUp(localBase);
-    }
-  });
-};
-
+createFolder(base);
 moveFilesUp(base);
-moveFoldersUp(base);
-sort("./RESULT");
